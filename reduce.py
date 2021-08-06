@@ -1,11 +1,9 @@
-import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-import os
-
-scaler = StandardScaler()
-pca = PCA(n_components=8)
-def reduce(source="/Users/pantera/melon/arena_mel"):
+def reduce(components:int,source="/Users/pantera/melon/arena_mel"):
+    """Dimensionality reduction with PCA, from 1876 down to components"""
+    from sklearn.decomposition import PCA
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    pca = PCA(n_components=components)
     for root, dirs, files in os.walk(source, topdown=False):
         for name in files:
             source = os.path.join(root, name)
@@ -21,4 +19,3 @@ def reduce(source="/Users/pantera/melon/arena_mel"):
                 os.mkdir(ddir)
                 np.save(destination, tmp2, allow_pickle=True, fix_imports=True)
 
-        
