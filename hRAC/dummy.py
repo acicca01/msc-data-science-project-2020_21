@@ -1,7 +1,7 @@
 # Create dummy music collection
 # Music collection will consist of 10 playlist featuring 10 songs each. Total song in collection is 14
 
-def dummify(play_no,songs_in_cat,songs_in_playlists):
+def dummy(play_no,songs_in_cat,songs_in_playlists):
 # play_no --> number of playlists
 # songs_in_cat --> total number of songs in catalogue
 # songs_in_playlists --> number of songs in playlist
