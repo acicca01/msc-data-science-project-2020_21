@@ -1,7 +1,9 @@
+from hRAC.code import code
+from hRAC.sparse_indices import sparse_indices
 import pandas as pd
 import numpy as np
 import pickle
-import implicit
+from implicit.lmf import LogisticMatrixFactorization
 from scipy.sparse import csr_matrix
 #read in the data and discover playlists-track interaction
 train = pd.read_json('/Users/pantera/melon/train.json')
@@ -31,6 +33,10 @@ trackmap = code(alltracks)
 playlistmap = code(allplaylists)
 tracks_dict_map={trackmap[k]: [playlistmap[pl_id] for pl_id in v] for k ,v in tracks_dict.items()}
 
+#Encoding original "train" dataframe for reference
+train_coded = train3.assign(id_encoded = train3["id"].map(playlistmap))
+train_coded = train_coded.assign(tracks_encoded = train_coded["tracks"].map(lambda v : [trackmap[x] for x in v]))
+
 #get popularity
 popularity = {x : len(v) for x,v in tracks_dict_map.items() }
 
@@ -42,7 +48,10 @@ for k,v in tracks_dict_map.items():
         hot[k] = v
     else:
         cold[k] = v
-
+   
+#saving playlists featuring hot or cold tracks   
+cold_play = {v[i] : [k]  for k,v in cold.items( ) for i in range(len(v)) }
+hot_play = {v[i] : [k]  for k,v in hot.items( ) for i in range(len(v)) }
 #get parameters to build hot and cold sparse matrices of interactions
 hot_idx = sparse_indices(hot)
 cold_idx = sparse_indices(cold)
@@ -50,13 +59,15 @@ cold_idx = sparse_indices(cold)
 #build interaction matrixes
 M = len(allplaylists) 
 N = len(alltracks)
-hot_sparse  = csr_matrix((hot_idx[0], (hot_idx[1], hot_idx[2])),shape=(M,N))
+
+#for model fitting I need to pass the transposed of user-item activity matrix
+hot_sparse  = csr_matrix((hot_idx[0], (hot_idx[2], hot_idx[1])),shape=(N,M))
+#for testing (i.e. recommending cold tracks) I use user-item activity matrix
 cold_sparse = csr_matrix((cold_idx[0], (cold_idx[1], cold_idx[2])),shape=(M,N))
 
-
-
 #implicit 
-
+model = LogisticMatrixFactorization(factors=30, iterations=40, regularization=1.5)
+model.fit(hot_sparse)
 
 #evaluation
 
