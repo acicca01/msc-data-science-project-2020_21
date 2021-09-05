@@ -39,10 +39,6 @@ tracks_dict_map={trackmap[k]: [playlistmap[pl_id] for pl_id in v] for k ,v in tr
 
 #now we can deal with arrays
 traindata = np.asarray([ v for _,v in tracks_dict_map.items() ],dtype=object)
-#interaction of j-th column i-th row . Column = tracks , row = playlist
-interactionlists = ( (j,i) for j in range(len(traindata)) for i in traindata[j])
-tobemasked = random.sample(interactionlists,int(len(interactionlists)*0.1))
-tobemasked = random.sample(interactionlists,int(len(interactionlists)*0.1))
 #Encoding original "train" dataframe for reference
 train_coded = train3.assign(id_encoded = train3["id"].map(playlistmap))
 train_coded = train_coded.assign(tracks_encoded = train_coded["tracks"].map(lambda v : [trackmap[x] for x in v]))
@@ -60,7 +56,23 @@ mask = [1 < interactions < 31 for interactions in popularity]
 for i in range(len(traindata)):
     if mask[i] == True:
         traindata[i] = random.sample(traindata[i],int(len(traindata[i])*0.5))
-   
+
+#check percentages of interactions masked
+#interaction of j-th column i-th row . Column = tracks , row = playlist
+#interactionstrain = ( (j,i) for j in range(len(traindata)) for i in traindata[j])
+#interactionstest = ( (j,i) for j in range(len(testdata)) for i in testdata[j])
+#(1 - (len([x for x in interactionstrain])/len([x for x in interactionstest])))*100
+
+#build a list so that masked_playlists[i] gives the tracks that should be recommended to playlist i
+masked_playlists = [ [] for i in range(len(allplaylists))]
+for i in range(len(traindata)):
+    if mask[i] == True:
+        for j in range(len(testdata[i])):
+            # testdata[i][j] gives me playlist id being masked
+            if testdata[i][j] not in traindata[i]:
+                masked_playlists[testdata[i][j]].append(i)
+
+
 #get parameters to build hot and cold sparse matrices of interactions
 hot_idx = sparse_indices(hot)
 cold_idx = sparse_indices(cold)
