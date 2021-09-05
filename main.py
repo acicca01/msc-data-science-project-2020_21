@@ -1,5 +1,8 @@
 from hRAC.code import code
 from hRAC.sparse_indices import sparse_indices
+from hRAC.takedown import takedown
+import random
+import math
 import pandas as pd
 import numpy as np
 import pickle
@@ -33,25 +36,31 @@ trackmap = code(alltracks)
 playlistmap = code(allplaylists)
 tracks_dict_map={trackmap[k]: [playlistmap[pl_id] for pl_id in v] for k ,v in tracks_dict.items()}
 
+
+#now we can deal with arrays
+traindata = np.asarray([ v for _,v in tracks_dict_map.items() ],dtype=object)
+#interaction of j-th column i-th row . Column = tracks , row = playlist
+interactionlists = ( (j,i) for j in range(len(traindata)) for i in traindata[j])
+tobemasked = random.sample(interactionlists,int(len(interactionlists)*0.1))
+tobemasked = random.sample(interactionlists,int(len(interactionlists)*0.1))
 #Encoding original "train" dataframe for reference
 train_coded = train3.assign(id_encoded = train3["id"].map(playlistmap))
 train_coded = train_coded.assign(tracks_encoded = train_coded["tracks"].map(lambda v : [trackmap[x] for x in v]))
-
+plays_dict_map = {train_coded['id_encoded'][i] : train_coded['tracks_encoded'][i]  for i in range(train_coded.shape[0]) }
 #get popularity
-popularity = {x : len(v) for x,v in tracks_dict_map.items() }
+popularity = [len(x) for x in traindata]
 
-#split according to popularity
-cold = {}
-hot = {}
-for k,v in tracks_dict_map.items():
-    if popularity[k] > 20:
-        hot[k] = v
-    else:
-        cold[k] = v
+#masking cold start tracks (i.e. less than 30 interactions) 
+#for those tracks drop 50% of the interactions at random 
+#!! cold start tracks with only 1 interaction will be spared from dropping
+
+testdata = traindata.copy()
+mask = [1 < interactions < 31 for interactions in popularity]
+
+for i in range(len(traindata)):
+    if mask[i] == True:
+        traindata[i] = random.sample(traindata[i],int(len(traindata[i])*0.5))
    
-#saving playlists featuring hot or cold tracks   
-cold_play = {v[i] : [k]  for k,v in cold.items( ) for i in range(len(v)) }
-hot_play = {v[i] : [k]  for k,v in hot.items( ) for i in range(len(v)) }
 #get parameters to build hot and cold sparse matrices of interactions
 hot_idx = sparse_indices(hot)
 cold_idx = sparse_indices(cold)
@@ -71,5 +80,11 @@ model.fit(hot_sparse)
 
 #evaluation
 
-
-
+#compare lists
+def cl(base,compare):
+    match = 0
+    for ele in compare:
+        for ele2 in base:
+              if ele == ele2:
+                  match+=1
+    return match
