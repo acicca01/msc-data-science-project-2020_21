@@ -8,6 +8,8 @@ import numpy as np
 import pickle
 from implicit.lmf import LogisticMatrixFactorization
 from scipy.sparse import csr_matrix
+from sklearn import metrics
+import time
 #read in the data and discover playlists-track interaction
 train = pd.read_json('/Users/pantera/melon/train.json')
 train2 = train[['id','songs']]
@@ -72,25 +74,42 @@ for i in range(len(traindata)):
             if testdata[i][j] not in traindata[i]:
                 masked_playlists[testdata[i][j]].append(i)
 
+#for each playlist give me tracks exposed to training data
+exposed_playlists = [ [] for i in range(len(allplaylists))]                
+for i in range(len(traindata)):
+    for j in range(len(traindata[i])):
+        exposed_playlists[traindata[i][j]].append(i)
 
 #get parameters to build hot and cold sparse matrices of interactions
-hot_idx = sparse_indices(hot)
-cold_idx = sparse_indices(cold)
-
+train_idx = sparse_indices(traindata)
+test_idx = sparse_indices(testdata)
 #build interaction matrixes
 M = len(allplaylists) 
 N = len(alltracks)
 
 #for model fitting I need to pass the transposed of user-item activity matrix
-hot_sparse  = csr_matrix((hot_idx[0], (hot_idx[2], hot_idx[1])),shape=(N,M))
-#for testing (i.e. recommending cold tracks) I use user-item activity matrix
-cold_sparse = csr_matrix((cold_idx[0], (cold_idx[1], cold_idx[2])),shape=(M,N))
-
+train_sparse  = csr_matrix((train_idx[0], (train_idx[1], train_idx[2])),shape=(M,N))
+#leaving test data as it is (user-items)
+test_sparse  = csr_matrix((test_idx[0], (test_idx[1], test_idx[2])),shape=(M,N))
 #implicit 
-model = LogisticMatrixFactorization(factors=30, iterations=40, regularization=1.5)
-model.fit(hot_sparse)
+logmodel = LogisticMatrixFactorization(factors=30, iterations=40, regularization=1.5)
+logmodel.fit(train_sparse.T)
 
 #evaluation
+start = time.time()
+auc_scores = []
+for i in range(len(allplaylists)):
+    actual = test_sparse[i,:].toarray().reshape(-1)
+    actual_less = np.delete(actual,exposed_playlists[i])
+    scores = logmodel.user_factors[i,:].dot(logmodel.item_factors.T)
+    scores_less = np.delete(scores,exposed_playlists[i])
+    fpr, tpr, thresholds = metrics.roc_curve(actual_less, scores_less)
+    auc_scores.append(metrics.auc(fpr, tpr))
+print("generated scores in {} minutes ".format(int(time.time() -start)/60))
+
+
+
+
 
 #compare lists
 def cl(base,compare):
