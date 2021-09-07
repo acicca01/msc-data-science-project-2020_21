@@ -52,8 +52,17 @@ popularity = [len(x) for x in traindata]
 #for those tracks drop 50% of the interactions at random 
 #!! cold start tracks with only 1 interaction will be spared from dropping
 
+#testdata = traindata.copy()
+mask = [0 < interactions < 31 for interactions in popularity]
+wipepop = [31<interactions for interactions in popularity]
+
+
+traindata = np.asarray([ v for _,v in tracks_dict_map.items() ],dtype=object)
+for i in range(len(traindata)):
+    if wipepop[i] == True:
+        traindata[i] = []
 testdata = traindata.copy()
-mask = [1 < interactions < 31 for interactions in popularity]
+
 
 for i in range(len(traindata)):
     if mask[i] == True:
