@@ -105,9 +105,11 @@ logmodel = LogisticMatrixFactorization(factors=30, iterations=40, regularization
 logmodel.fit(train_sparse.T)
 
 #evaluation
+#filter out users who did not have any item masked
+modplaylist = [i for i in range(len(masked_playlists)) if len(masked_playlists[i]) != 0]
 start = time.time()
 auc_scores = []
-for i in range(len(allplaylists)):
+for i in modplaylist:
     actual = test_sparse[i,:].toarray().reshape(-1)
     actual_less = np.delete(actual,exposed_playlists[i])
     scores = logmodel.user_factors[i,:].dot(logmodel.item_factors.T)
