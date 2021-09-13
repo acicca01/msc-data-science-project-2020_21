@@ -34,8 +34,8 @@ with open('/Users/pantera/melon/tracks_dict.pickle', 'rb') as handle:
 alltracks = [x for x in tracks_dict.keys()]
 allplaylists = [tracks for playlist in tracks_dict.values() for tracks in playlist]
 allplaylists=list(set(allplaylists))
-trackmap = code(alltracks)
-playlistmap = code(allplaylists)
+trackmap = code(alltracks)[0]
+playlistmap = code(allplaylists)[0]
 tracks_dict_map={trackmap[k]: [playlistmap[pl_id] for pl_id in v] for k ,v in tracks_dict.items()}
 
 
