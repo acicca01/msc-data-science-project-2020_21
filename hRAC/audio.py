@@ -28,21 +28,11 @@ targetset = np.load("/Users/pantera/melon/files/track_factors.npy")
 targetset = targetset[poptracks , :]
 hh = model.fit(x=trainset,y=targetset,validation_split = 0.2,epochs = 20)
 
-        
-
-
-
-#add 1 channel for CNN
-with open('/Users/pantera/melon/files/decodemap', 'rb') as handle:
-    decode = pickle.load(handle)
-
-#check training for first 100 compressed tracks
-#                                                            #      ###      ###   
-# #####  #####     ##    #  #    #  #  #    #   ####        ##     #   #    #   #  
-#   #    #    #   #  #   #  ##   #  #  ##   #  #    #      # #    #     #  #     # 
-#   #    #    #  #    #  #  # #  #  #  # #  #  #             #    #     #  #     # 
-#   #    #####   ######  #  #  # #  #  #  # #  #  ###        #    #     #  #     # 
-#   #    #   #   #    #  #  #   ##  #  #   ##  #    #        #     #   #    #   #  
-#   #    #    #  #    #  #  #    #  #  #    #   ####       #####    ###      ###   
-                                                                                  
+#prediction
+testtracks = [decodemap[i] for i in range(100) if coldtracks[i] == True]
+consolidate(testtracks,"predict" , root)
+testset = np.load("/Users/pantera/melon/files/predict.npy")
+testset = testset.reshape(50,48,48,1)
+predicted_factors = model.predict(testset)
+np.save("/Users/pantera/melon/files/predicted_factors.npy",predicted_factors)
 
