@@ -1,3 +1,4 @@
+import os
 from hRAC.code import code
 from hRAC.sparse_indices import sparse_indices
 from hRAC.takedown import takedown
@@ -55,7 +56,11 @@ popularity = [len(x) for x in traindata]
 #testdata = traindata.copy()
 mask = [0 < interactions < 31 for interactions in popularity]
 wipepop = [31<interactions for interactions in popularity]
-
+#save results for later loading into audio module
+with open('/Users/pantera/melon/files/coldtracks.pickle', 'wb') as handle:
+    pickle.dump(mask, handle)
+with open('/Users/pantera/melon/files/poptracks.pickle', 'wb') as handle:
+    pickle.dump(wipepop handle)
 
 traindata = np.asarray([ v for _,v in tracks_dict_map.items() ],dtype=object)
 for i in range(len(traindata)):
