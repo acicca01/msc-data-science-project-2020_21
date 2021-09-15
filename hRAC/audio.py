@@ -3,15 +3,35 @@ import numpy as np
 import pickle
 import math
 from tensorflow.keras import optimizers
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Input, Convolution2D, MaxPooling2D, Dense, Dropout, Activation, Flatten
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.activations import elu
-from tensorflow.keras.layers import BatchNormalization
 from hRAC.consolidate import consolidate
+from hRAC.cnn import cnn
 root = "/Users/pantera/melon/arena_mel_compress/"
 files = "/Users/pantera/melon/files"
+
+#gather data
+with open('/Users/pantera/melon/files/coldtracks.pickle', 'rb') as handle:
+    coldtracks = pickle.load(handle)
+with open('/Users/pantera/melon/files/poptracks.pickle', 'rb') as handle:
+    poptracks = pickle.load(handle)
+with open('/Users/pantera/melon/files/decodemap', 'rb') as handle:
+    decodemap = pickle.load(handle)
+
+traintracks = [decodemap[i] for i in range(len(poptracks)) if poptracks[i] == True]
+consolidate(traintracks,"training" , root)
+trainset = np.load("/Users/pantera/melon/files/training.npy")
+trainset = trainset.reshape(28393,48,48,1)
+model = cnn(32)
+adam = optimizers.Adam(lr=0.001)
+model.compile(loss='MeanSquaredError', metrics='MeanAbsoluteError', optimizer=adam)
+targetset = np.load("/Users/pantera/melon/files/track_factors.npy")
+targetset = targetset[poptracks , :]
+hh = model.fit(x=trainset,y=targetset,validation_split = 0.2,epochs = 20)
+
+        
+
+
+
 #add 1 channel for CNN
 with open('/Users/pantera/melon/files/decodemap', 'rb') as handle:
     decode = pickle.load(handle)
@@ -25,49 +45,4 @@ with open('/Users/pantera/melon/files/decodemap', 'rb') as handle:
 #   #    #   #   #    #  #  #   ##  #  #   ##  #    #        #     #   #    #   #  
 #   #    #    #  #    #  #  #    #  #  #    #   ####       #####    ###      ###   
                                                                                   
-consolidate([x for x in range(100)],"train_100",root)
-train = np.load(os.path.join(files,"train_100.npy"))
-train = train.reshape(100,48,48,1)       
-#determining right shape for input data
 
-def cnn(melgram_input,n_factors):
-    # Input block
-    x = BatchNormalization(axis=1, name='bn_0_freq')(melgram_input)
-
-    # Conv block 1
-    x = Convolution2D(64, 3, 3, padding='same', name='conv1')(x)
-    x = BatchNormalization(axis=3,  name='bn1')(x)
-    x = ELU()(x)
-    x = MaxPooling2D(pool_size=(2, 4), name='pool1')(x)
-
-    # Conv block 2
-    x = Convolution2D(128, 3, 3, padding='same', name='conv2')(x)
-    x = BatchNormalization(axis=3, name='bn2')(x)
-    x = ELU()(x)
-    x = MaxPooling2D(pool_size=(2, 4), name='pool2')(x)
-
-    # Conv block 3
-    x = Convolution2D(128, 3, 3, padding='same', name='conv3')(x)
-    x = BatchNormalization(axis=3,  name='bn3')(x)
-    x = ELU()(x)
-    x = MaxPooling2D(pool_sie=(2, 4), name='pool3')(x)
-
-    # Conv block 4
-    x = Convolution2D(128, 3, 3, padding='same', name='conv4')(x)
-    x = BatchNormalization(axis=3,  name='bn4')(x)
-    x = ELU()(x)
-    x = MaxPooling2D(pool_size=(3, 5), name='pool4')(x)
-
-    # Conv block 5
-    x = Convolution2D(64, 3, 3, padding='same', name='conv5')(x)
-    x = BatchNormalization(axis=channel_axis,  name='bn5')(x)
-    x = ELU()(x)
-    x = MaxPooling2D(pool_size=(4, 4), name='pool5')(x)
-
-    #output 
-    x = Flatten()(x)
-    x = Dense(n_factors,activation='linear',name='output')(x)
-
-    # Create model
-    model = Model(melgram_input,x)
-    return model
