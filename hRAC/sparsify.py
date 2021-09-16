@@ -29,4 +29,4 @@ def sparsify(cutoff,data = testdata,files ="/Users/pantera/melon/files"):
     #check density
     interactionstest = len([ (j,i) for j in range(len(testdata)) for i in range(len(testdata[j])) ])
     drop_pct = (len(masked)/interactionstest)*100
-    return (traindata,masked,drop_pct)a
+    return (traindata,masked,drop_pct)
