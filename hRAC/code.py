@@ -5,10 +5,10 @@ def code(idlist ,filename ,files= "/Users/pantera/melon/files/"):
         It saves the encodemap and decodemap in files                """
     #idlist_to_sequence
     encodemap = {y :x  for (x,y) in enumerate(idlist)}
-    with open(os.path.join(files,filename+".pickle"), 'wb') as handle:
+    with open(os.path.join(files,"encodedmap_"+filename+".pickle"), 'wb') as handle:
         pickle.dump(encodemap, handle)
     #sequence_to_idlist
     decodemap = {x :y  for (x,y) in enumerate(idlist)}
-    with open(os.path.join(files,filename+".pickle"), 'wb') as handle:
+    with open(os.path.join(files,"decodedmap_"+filename+".pickle"), 'wb') as handle:
         pickle.dump(decodemap, handle)
     return (encodemap,decodemap)
