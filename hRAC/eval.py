@@ -1,29 +1,26 @@
-def eval(train,test,user_factors,item_factors,n):
+def eval(train_sparse,test_sparse,user_factors,item_factors,userlist):
     """ Function used to evaluate recommendation """
     """ For each set of recommendation returns the mean AUC score """
     """ train --> training set in sparse format """
     """ test --> test_set in sparse format """
     """ user_factors , item_factors --> user , item factors """
-    """ n --> subset the evaluation on a subset of users """  
+    """ userlist --> list of users to run evalutation on """
+
     from sklearn import metrics
     import time
     import numpy as np
     from scipy.sparse import csr_matrix
-    
-    #evallist = list(set([ele[0] for ele in masked]))
-    evallist = list(set([ele[0] for ele in masked if activity[ele[0]] > 50 ]))
-    checklist = np.random.choice(evallist,n,replace = False)
     start = time.time()
     auc_scores = []
-    tot = len(checklist)
+    tot = len(userlist)
     i = 0
-    for user in checklist:
+    for user in userlist:
         training = train_sparse[user,:].toarray().reshape(-1)
         zeros = np.where(training == 0)[0]    #indixes for no interactions
         actual = test_sparse[user,:].toarray().reshape(-1)
         actual = actual[zeros]
         #subsetting predictions only on items in training with no interaction
-        scores = logmodel.user_factors[user,:].dot(logmodel.item_factors.T)
+        scores = user_factors[user,:].dot(item_factors.T)
         scores = scores[zeros]
         fpr, tpr, thresholds = metrics.roc_curve(actual, scores)
         auc_scores.append(metrics.auc(fpr, tpr))
