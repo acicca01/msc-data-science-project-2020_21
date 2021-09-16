@@ -1,9 +1,11 @@
-def sparsify(cutoff,data = testdata,files ="/Users/pantera/melon/files"):
+def sparsify(cutoff,data  ,files ="/Users/pantera/melon/files"):
     """ Mask interactions in data accoring to popularity cutoff """
     """ Returns traindata ,a list of masked interactions and percentage drop interactions  """
     import pickle
     import os
-    traindata = list(range(len(alltracks)))
+    _return = dict()
+    testdata = data.copy()
+    traindata = list(range(len(testdata)))
     #get track popularity
     popularity = [len(x) for x in testdata]
     #masking cold start tracks (i.e. <= cutoff interactions)
@@ -12,7 +14,7 @@ def sparsify(cutoff,data = testdata,files ="/Users/pantera/melon/files"):
     #save results for later loading into audio module
     with open(os.path.join(files,"coldtracks.pickle"), 'wb') as handle:
         pickle.dump(mask, handle)
-    with open(os.pth.join(files,'poptracks.pickle'), 'wb') as handle:
+    with open(os.path.join(files,'poptracks.pickle'), 'wb') as handle:
         pickle.dump(wipepop, handle)
     masked = []
     #building train dataset
@@ -28,5 +30,11 @@ def sparsify(cutoff,data = testdata,files ="/Users/pantera/melon/files"):
         pickle.dump(masked, handle)
     #check density
     interactionstest = len([ (j,i) for j in range(len(testdata)) for i in range(len(testdata[j])) ])
+    # 70,785,005,082 is total number of elements in user-item activity matrix
+    sparsity = 1-len([ (j,i) for j in range(len(traindata)) for i in range(len(traindata[j])) ])/70785005082
     drop_pct = (len(masked)/interactionstest)*100
-    return (traindata,masked,drop_pct)
+    _return['traindata'] = traindata
+    _return['masked'] = masked
+    _return['drop_pct'] = drop_pct
+    _return['sparsity_pct'] = sparsity*100
+    return _return
