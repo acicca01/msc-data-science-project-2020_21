@@ -84,6 +84,10 @@ for ele in sparsify_out["trackdropped"]:
     sampled_track.append(popularity[ele])
 
 spop = pd.Series(sampled_track)
+print("Stats about dropped tracks"
+        )
+print()
+print("--------------------------")
 print(spop.describe())
 
 #activity stats about affected users
@@ -92,6 +96,10 @@ for ele in sparsify_out["userdropped"]:
     sampled_user.append(activity[ele])
 
 sact = pd.Series(sampled_user)
+print("Stats about affected users"
+        )
+print()
+print("--------------------------")
 print(sact.describe())
 
 #get parameters to build hot and cold sparse matrices of interactions
@@ -107,13 +115,15 @@ test_sparse  = csr_matrix((test_idx[0], (test_idx[1], test_idx[2])),shape=(M,N))
 logmodel = LogisticMatrixFactorization(factors=32, iterations=40, regularization=1.5)
 logmodel.fit(train_sparse.T)
 
+np.save(os.path.join(files,"item_factors_{}".format(seed)),logmodel.item_factors)
+np.save(os.path.join(files,"track_factors_{}".format(seed)),logmodel.track_factors)
 
 #export indexes for popular tracks 
 trackrank = [(i,k) for i,k in enumerate(popularity)]
 trackrank.sort(key=lambda x :x[1],reverse = True)
 traincnn=[]
 for ele in trackrank:
-    if ele[1] == 100:
+    if ele[1] == 50:
         break
     else:
         traincnn.append(ele[0])
@@ -121,11 +131,15 @@ print("Extracted top {}  popular tracks for CNN".format(len(traincnn)))
 
 #decode trackids to allow proper retrieval of audio files
 traincnn_decoded  = [decode[x] for x in traincnn]
-with open('/Users/pantera/melon/files/traincnn_decoded.pickle', 'wb') as handle:
+with open('/Users/pantera/melon/files/traincnn_decoded_{}.pickle'.format(seed), 'wb') as handle:
     pickle.dump(traincnn_decoded, handle)
 #export factors for popular tracks to be used as class variables for CNN training
+xport_factors = []
+for ele in traincnn:
+    xport_factors.append(logmodel.item_factors[ele])
+xport_factors_np = np.asarray(xport_factors)   
 
-np.save(os.path.join(files,"traincnn_factors.npy"),logmodel.item_factors[traincnn])
+np.save(os.path.join(files,"traincnn_factors_{}.npy".format(seed)),xport_factors_np)
 #x = eval(train_sparse,test_sparse,logmodel.user_factors,logmodel.item_factors,sparsify_out["userdropped"])
 
 
