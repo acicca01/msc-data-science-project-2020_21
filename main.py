@@ -10,9 +10,12 @@ import numpy as np
 import pickle
 from implicit.lmf import LogisticMatrixFactorization
 from scipy.sparse import csr_matrix
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import scipy.sparse
 from numpy.random import default_rng
 import time
-
+root = "/Users/pantera/melon/arena_mel/"
 
 #location for intermediate files drop. Useful when switching environment for CNN training
 files = "/Users/pantera/melon/files"
@@ -71,7 +74,8 @@ activity = [len(x) for x in userdata]
 popularity = [len(x) for x in testdata]
 
 rng = default_rng()
-seed = rng.integers(100000000)
+#seed = rng.integers(100000000)
+seed = 5132700
 sparsify(testdata,10,seed)
 #mask interactions
 sparsify_out = sparsify(testdata,10,seed)
@@ -96,34 +100,46 @@ for ele in sparsify_out["userdropped"]:
     sampled_user.append(activity[ele])
 
 sact = pd.Series(sampled_user)
+
+print()
 print("Stats about affected users"
         )
 print()
 print("--------------------------")
 print(sact.describe())
+print()
 
-#get parameters to build hot and cold sparse matrices of interactions
+#get parameters to build test and train sparse matrices of interactions
 train_idx = sparse_indices(sparsify_out['traindata'])
 test_idx = sparse_indices(testdata)
+
 #build interaction matrixes
 M = len(allplaylists) 
 N = len(alltracks)
 train_sparse  = csr_matrix((train_idx[0], (train_idx[1], train_idx[2])),shape=(M,N))
 test_sparse  = csr_matrix((test_idx[0], (test_idx[1], test_idx[2])),shape=(M,N))
+#save sparse matrixes for later evaluation step
+scipy.sparse.save_npz(os.path.join(files,"train_sparse_{}".format(seed)),train_sparse)
+scipy.sparse.save_npz(os.path.join(files,"test_sparse_{}".format(seed)),test_sparse)
 
 #for model fitting I need to pass the transposed of user-item activity matrix
-logmodel = LogisticMatrixFactorization(factors=32, iterations=40, regularization=1.5)
+logmodel = LogisticMatrixFactorization(factors=98, iterations=40, regularization=1.5)
 logmodel.fit(train_sparse.T)
-
+print()
+print("--------------------------")
+print("Saving user & item factors")
+#save user-item factors for later evaluation
 np.save(os.path.join(files,"item_factors_{}".format(seed)),logmodel.item_factors)
-np.save(os.path.join(files,"track_factors_{}".format(seed)),logmodel.track_factors)
+np.save(os.path.join(files,"user_factors_{}".format(seed)),logmodel.user_factors)
 
 #export indexes for popular tracks 
-trackrank = [(i,k) for i,k in enumerate(popularity)]
+#trackrank = [(i,k) for i,k in enumerate(popularity)]
+popularity_train = [len(x) for x in sparsify_out["traindata"]]
+trackrank = [(i,k) for i,k in enumerate(popularity_train)]
 trackrank.sort(key=lambda x :x[1],reverse = True)
 traincnn=[]
 for ele in trackrank:
-    if ele[1] == 50:
+    if ele[1] == 100:
         break
     else:
         traincnn.append(ele[0])
@@ -131,15 +147,58 @@ print("Extracted top {}  popular tracks for CNN".format(len(traincnn)))
 
 #decode trackids to allow proper retrieval of audio files
 traincnn_decoded  = [decode[x] for x in traincnn]
-with open('/Users/pantera/melon/files/traincnn_decoded_{}.pickle'.format(seed), 'wb') as handle:
-    pickle.dump(traincnn_decoded, handle)
+#exporting mel-spectrograms for CNN training
+audio_files = []
+for i in range(len(traincnn_decoded)):
+    audio_files.append(os.path.join(root,str(math.floor(traincnn_decoded[i]/1000)),str(traincnn_decoded[i])+".npy"))
+tmp = map(np.load,audio_files)
+trainset = np.stack(list(tmp))
+np.save(os.path.join(files,"trainset{}.npy".format(seed)),trainset)
+
+#exporting mel-spectrograms for CNN testing
+
+tracks_to_test = [decode[x] for x in sparsify_out["trackdropped"]]
+test_files = []
+for i in range(len(tracks_to_test)):
+    test_files.append(os.path.join(root,str(math.floor(tracks_to_test[i]/1000)),str(tracks_to_test[i])+".npy"))
+with open(os.path.join(files,"test_files{}".format(seed)), 'wb') as handle:
+    pickle.dump(test_files, handle)
+
+
 #export factors for popular tracks to be used as class variables for CNN training
 xport_factors = []
 for ele in traincnn:
     xport_factors.append(logmodel.item_factors[ele])
 xport_factors_np = np.asarray(xport_factors)   
-
 np.save(os.path.join(files,"traincnn_factors_{}.npy".format(seed)),xport_factors_np)
+
+
+
+
+
 #x = eval(train_sparse,test_sparse,logmodel.user_factors,logmodel.item_factors,sparsify_out["userdropped"])
+
+def debug():
+    #exporting compressed audio
+    pca = PCA(n_components =3 )
+    scaler = StandardScaler()
+    audio_files = []
+    for i in range(len(traincnn_decoded)):
+        audio_files.append(os.path.join(root,str(math.floor(traincnn_decoded[i]/1000)),str(traincnn_decoded[i])+".npy"))
+
+    def compress(x):
+        tmp = np.load(x)
+        return pca.fit_transform(tmp)
+    tmp = map(compress,audio_files)
+    trainset_compress = np.stack(list(tmp))
+    np.save(os.path.join(files,"trainset_compress_{}.npy".format(seed)),trainset_compress)
+
+    #exporting for scaled audio
+    def scale(x):
+        tmp = np.load(x)
+        return scaler.fit_transform(tmp)
+    tmp = map(scale,audio_files)
+    trainset_scale = np.stack(list(tmp))
+    np.save(os.path.join(files,"trainset_scale_{}.npy".format(seed)),trainset_scale)
 
 
