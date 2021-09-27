@@ -14,7 +14,7 @@ def sparsify(testdata,pct,seed):
 
     trainingdata : sparsified dataset
     userdropped :  list of users affected from the dropping
-    trackdropped : list of dropped tracks 
+    trackdropped : list of tracks affected from the dropping 
     
     Notes
     -----
