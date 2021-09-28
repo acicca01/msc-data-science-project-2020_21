@@ -38,7 +38,8 @@ model.compile(loss='MeanSquaredError', metrics='MeanAbsoluteError', optimizer=ad
 #                                        mode ="min", patience = 3,  
 #                                        restore_best_weights = True)
 #hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 50,callbacks = [earlystopping])
-hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 15)
+checkpoint = callbacks.ModelCheckpoint(os.path.join(files,"weights{}.hdf5".format(seed)),monitor='val_loss',verbose=1,save_best_only=True,mode='min')
+hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 15, callbacks=[checkpoint])
 plt.plot(hh.history['loss'], label='train')
 plt.plot(hh.history['val_loss'], label='test')
 plt.legend()
