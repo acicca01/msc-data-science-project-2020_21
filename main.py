@@ -189,25 +189,48 @@ xport_factors_np = np.asarray(xport_factors)
 np.save(os.path.join(files,"valset_factors{}.npy".format(seed)),xport_factors_np)
 
 
-#exporting mel-spectrograms for CNN testing
+#batch-exporting mel-spectrograms for CNN testing
 tracks_to_test = [x for x in tracks_desired if x not in valcnn+traincnn]
-tracks_to_test_random = random.sample(tracks_to_test,5000)
-
-audio,testidx = fetch_mel(tracks_to_test_random)
-tmp = map(np.load,audio)
-testset = np.stack(list(tmp))
-np.save(os.path.join(files,"testset{}.npy".format(seed)),testset)
-
-#exporting testset tracks latent factors for CNN evaluation
-xport_factors = []
-for ele in testidx:
-    xport_factors.append(item_factors[ele])
-xport_factors_np = np.asarray(xport_factors)
-np.save(os.path.join(files,"testset_factors{}.npy".format(seed)),xport_factors_np)
+dim = divmod(len(tracks_to_test),5000)
+partition = []
+for i in range(0,dim[0]):
+    if i < dim[0]-1:
+        partition.append(tracks_to_test[i*5000:(i+1)*5000])
+    else:
+        partition.append(tracks_to_test[i*5000:(i*5000+dim[1])])
+i = 0
+testidx = []
+for ele in partition:
+    audio,tmpidx = fetch_mel(ele)
+    tmp = map(np.load,audio)
+    testset = np.stack(list(tmp))
+    np.save(os.path.join(files,"testset_{}_{}.npy".format(i,seed)),testset)
+    testidx = testidx + tmpidx
+    #exporting testset tracks latent factors for CNN evaluation
+    xport_factors = []
+    for ele in tmpidx:
+        xport_factors.append(item_factors[ele])
+    xport_factors_np = np.asarray(xport_factors)
+    np.save(os.path.join(files,"testset_factors_{}_{}.npy".format(i,seed)),xport_factors_np)
+    i+=1
+    
 
 #exporting testidx track identifiers we wish to replace their track factors for
 with open (os.path.join(files,"testidx{}.pickle".format(seed)),'wb') as handle:
     pickle.dump(testidx,handle)
+
+#exporting test users -- only those very active ( 100+ interactions)
+active_users = []
+for user in  sparsify_out["userdropped"]:
+    if activity[user] > 100:
+        active_users.append(user)
+with open (os.path.join(files,"testusers{}.pickle".format(seed)),'wb') as handle:
+    pickle.dump( active_users,handle)
+
+#exporting popularity in testdata 
+with open (os.path.join(files,"testpop{}.pickle".format(seed)),'wb') as handle:
+    pickle.dump(popularity ,handle)
+
 
 
 #x = eval(train_sparse,test_sparse,logmodel.user_factors,logmodel.item_factors,sparsify_out["userdropped"])
