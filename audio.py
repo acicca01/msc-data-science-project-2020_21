@@ -12,59 +12,54 @@ files = "/Users/pantera/melon/files"
 
 
 ##Set seed before training
-seed = 5132700
-traincnn_factors = np.load(os.path.join(files,"traincnn_factors_"+ str(seed)+".npy"))
+#importing seed from main session
+with open (os.path.join(files,"seed.pickle"),'rb') as handle:
+    seed = pickle.load(handle)
+
+#loading validation set
+valset = np.load(os.path.join(files,"valset" + str(seed)+".npy"))
+valset = valset.reshape(valset.shape[0],valset.shape[1],valset.shape[2],1)
+valfactors = np.load(os.path.join(files,"valset_factors"+ str(seed)+".npy"))
+
+
+#loading training set
 trainset = np.load(os.path.join(files,"trainset" + str(seed)+".npy"))
 trainset = trainset.reshape(trainset.shape[0],trainset.shape[1],trainset.shape[2],1)
+trainfactors = np.load(os.path.join(files,"trainset_factors"+ str(seed)+".npy"))
+
+
 model = cnn(48,1876,100)
-adam = optimizers.Adam(lr=0.01)
+adam = optimizers.Adam(lr=0.007)
 model.compile(loss='MeanSquaredError', metrics='MeanAbsoluteError', optimizer=adam)
 
 
 ####TRAINING 
 #earlystopping = callbacks.EarlyStopping(monitor ="val_loss",  
-#                                        mode ="min", patience = 5,  
+#                                        mode ="min", patience = 3,  
 #                                        restore_best_weights = True)
-#hh = model.fit(x=trainset,y=traincnn_factors,validation_split = 0.2,epochs = 100,callbacks = [earlystopping])
-hh = model.fit(x=trainset,y=traincnn_factors,validation_split = 0.2,epochs = 50)
+#hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 50,callbacks = [earlystopping])
+hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 15)
 plt.plot(hh.history['loss'], label='train')
 plt.plot(hh.history['val_loss'], label='test')
 plt.legend()
-plt.show()
-
+plt.figsave(os.path.join(files,"cnntraining{}".format(seed)))
 #------------------------------------------
 #               prediction
 
-#loading paths to testfiles
-with open(os.path.join(files,"test_files{}".format(seed)), 'rb') as handle:
-    test_files = pickle.load(handle)
+
+testset = np.load(os.path.join(files,"testset" + str(seed)+".npy"))
+testset = testset.reshape(testset.shape[0],testset.shape[1],testset.shape[2],1)
 
 
-good = []
-bad = []
+predicted = model.predict(testset)
+np.save(os.path.join(files,"predicted_factors{}.npy".format(seed)),predicted)
 
-#filter out incomplete audio samples
-#append path for good files in good
-def audiocheck(audiolist):
-    for x in audiolist:
-        mel = np.load(x)
-        if mel.shape == (48,1876):
-            good.append(x)
-        else:
-            bad.append(x)
+#------------------------------------------
+#               evaluation 
 
-audiocheck(test_files)
+testset_factors = np.load(os.path.join(files,"testset_factors{}.npy".format(seed)))
+results = model.evaluate(testset,testset_factors)
 
-def predict(x):
-    mel = np.load(x)
-    mel=mel.reshape(1,48,1876,1)
-    y = model.predict(mel)
-    return y
-
-tmp = map(predict,good)
-predicted = np.stack(list(tmp))
-with open(os.path.join(files,"predicted_track_factors_{}".format(seed)), 'wb') as handle:
-    pickle.dump(predicted, handle)
 
 
 
