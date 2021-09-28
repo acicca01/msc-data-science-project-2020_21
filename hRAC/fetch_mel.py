@@ -19,7 +19,7 @@ def fetch_mel(trackset , root = '/Users/pantera/melon/arena_mel/',files = "/User
     import math
     import numpy as np
     import pickle
-    
+    import os 
     with open (os.path.join(files,"decodedmap_tracks.pickle"),'rb') as handle:
         decode = pickle.load(handle)
 
