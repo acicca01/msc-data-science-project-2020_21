@@ -29,6 +29,7 @@ trainfactors = np.load(os.path.join(files,"trainset_factors"+ str(seed)+".npy"))
 
 
 model = cnn(48,1876,100)
+model.load_weights(os.path.join(files,"weights{}.hdf5".format(seed)))
 adam = optimizers.Adam(lr=0.007)
 model.compile(loss='MeanSquaredError', metrics='MeanAbsoluteError', optimizer=adam)
 
@@ -39,7 +40,7 @@ model.compile(loss='MeanSquaredError', metrics='MeanAbsoluteError', optimizer=ad
 #                                        restore_best_weights = True)
 #hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 50,callbacks = [earlystopping])
 checkpoint = callbacks.ModelCheckpoint(os.path.join(files,"weights{}.hdf5".format(seed)),monitor='val_loss',verbose=1,save_best_only=True,mode='min')
-hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 15, callbacks=[checkpoint])
+hh = model.fit(x=trainset,y=trainfactors,validation_data = (valset , valfactors), epochs = 50, callbacks=[checkpoint])
 plt.plot(hh.history['loss'], label='train')
 plt.plot(hh.history['val_loss'], label='test')
 plt.legend()
@@ -47,19 +48,30 @@ plt.figsave(os.path.join(files,"cnntraining{}".format(seed)))
 #------------------------------------------
 #               prediction
 
+predicted = []
+for i in range(35):
+    testset = np.load(os.path.join(files,"testset_{}_{}.npy".format(i,seed)))
+    testset = np.load(os.path.join(files,"testset" + str(seed)+".npy"))
+    testset = testset.reshape(testset.shape[0],testset.shape[1],testset.shape[2],1)
+    predicted.append(model.predict(testset))
+    np.save(os.path.join(files,"predicted_factors{}.npy".format(seed)),predicted)
 
-testset = np.load(os.path.join(files,"testset" + str(seed)+".npy"))
-testset = testset.reshape(testset.shape[0],testset.shape[1],testset.shape[2],1)
+#alternative method will save multiple prediction files
+#for i in range(35):
+#    testset = np.load(os.path.join(files,"testset_{}_{}.npy".format(i,seed)))
+#    testset = testset.reshape(testset.shape[0],testset.shape[1],testset.shape[2],1)
+#    np.save(os.path.join(files,"predicted_factors_{}_{}.npy".format(i,seed)),model.predict(testset))
 
-
-predicted = model.predict(testset)
-np.save(os.path.join(files,"predicted_factors{}.npy".format(seed)),predicted)
 
 #------------------------------------------
 #               evaluation 
 
-testset_factors = np.load(os.path.join(files,"testset_factors{}.npy".format(seed)))
-results = model.evaluate(testset,testset_factors)
+results = []
+for i in range(35):
+    testset = np.load(os.path.join(files,"testset_{}_{}.npy".format(i,seed)))
+    #testset_factors = np.load(os.path.join(files,"testset_factors{}.npy".format(seed)))
+    testset_factors = np.load(os.path.join(files,"testset_factors_{}_{}.npy".format(i,seed)))
+    results.append(model.evaluate(testset,testset_factors))
 
 
 
