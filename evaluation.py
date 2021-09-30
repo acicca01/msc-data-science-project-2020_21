@@ -42,7 +42,26 @@ with open (os.path.join(files,"testidx{}.pickle".format(seed)),'rb') as handle:
     textidx = pickle.load(handle)
 
 #predicted factors from CB branch
-predicted_factors = np.load(os.path.join(files,"predicted_factors{}.npy".format(seed)))
+#predicted_factors = np.load(os.path.join(files,"predicted_factors{}.npy".format(seed)))
+#batch laoding predicted factors:
+
+tmp = [[] for _ in range(35)]
+for i in range(35):
+    try:
+        tmp[i] = np.load(os.path.join(files,"predicted_factors_{}_{}.npy".format(i,seed)))
+        print("Ok, len = ",str(len(tmp[i])))
+    except:
+        print(str(i)," not found")
+#batch injecting factors
+
+injected_factors = item_factors.copy()
+batchno = 0
+for batch in tmp:
+    if len(batch)>0:
+        for i in range(len(batch)):
+            injected_factors[textidx[batchno][i]] = batch[i]
+    batchno+1
+
 
 #Test users
 with open (os.path.join(files,"testusers{}.pickle".format(seed)),'rb') as handle:
@@ -54,16 +73,14 @@ with open (os.path.join(files,"testpop{}.pickle".format(seed)),'rb') as handle:
 
 
 
-# check auc for collaborative filtering branch
-#mAUC= eval(train_sparse,test_sparse,user_factors,item_factors,test_users,AUC)
-(auc,ndcg,mapk) = eval(train_sparse,test_sparse,user_factors,item_factors,test_users,NDCG)
+random = np.random.uniform(low = -1,high = 1,size=(615142,100))
+
+ran= eval(train_sparse,test_sparse,user_factors,random,test_users,popularity)
+
+hh= eval(train_sparse,test_sparse,user_factors,injected_factors,test_users,popularity)
+
+cf= eval(train_sparse,test_sparse,user_factors,item_factors,test_users,popularity)
 
 
 
 
-injected_factors = item_factors.copy()
-i = 0
-for ele in textidx:
-    injected_factors[ele] = predicted_factors[i]
-    i +=1
-injected_factors == item_factors
