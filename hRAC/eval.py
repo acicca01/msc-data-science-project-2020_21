@@ -17,6 +17,7 @@ def eval(train_sparse,test_sparse,user_factors,item_factors,userlist,popularity)
     ndcg_scores = []
     map_scores = []
     pop_score = []
+    gtpop_score = []
     tot = len(userlist)
     i = 0
     for user in userlist:
@@ -50,9 +51,17 @@ def eval(train_sparse,test_sparse,user_factors,item_factors,userlist,popularity)
             popuser+=popularity[ele]
         popuser = popuser/100
         pop_score.append(popuser)
+    
+        #pop ratio
+        gtpop = 0
+        for ele in gt[:100]:
+            gtpop+=popularity[ele]
+        gtpop = gtpop/100
+        gtpop_score.append(popuser/gtpop)
+
         print("\r>> Progress {:.0%}".format(progress),end='')
         i+=1
     print()
     print("generated scores in {} minutes ".format(int(time.time() -start)/60))
-    return np.mean(auc_scores) , np.mean(ndcg_scores) , np.mean(map_scores),np.mean(pop_score)
+    return np.mean(auc_scores) , np.mean(ndcg_scores) , np.mean(map_scores),np.mean(pop_score),np.mean(gtpop_score)
 
