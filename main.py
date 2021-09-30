@@ -193,8 +193,8 @@ np.save(os.path.join(files,"valset_factors{}.npy".format(seed)),xport_factors_np
 tracks_to_test = [x for x in tracks_desired if x not in valcnn+traincnn]
 dim = divmod(len(tracks_to_test),5000)
 partition = []
-for i in range(0,dim[0]):
-    if i < dim[0]-1:
+for i in range(0,dim[0]+1):
+    if i < dim[0]:
         partition.append(tracks_to_test[i*5000:(i+1)*5000])
     else:
         partition.append(tracks_to_test[i*5000:(i*5000+dim[1])])
@@ -205,11 +205,11 @@ for ele in partition:
     tmp = map(np.load,audio)
     testset = np.stack(list(tmp))
     np.save(os.path.join(files,"testset_{}_{}.npy".format(i,seed)),testset)
-    testidx = testidx + tmpidx
+    testidx.append(tmpidx)
     #exporting testset tracks latent factors for CNN evaluation
     xport_factors = []
     for ele in tmpidx:
-        xport_factors.append(item_factors[ele])
+        xport_factors.append(logmodel.item_factors[ele])
     xport_factors_np = np.asarray(xport_factors)
     np.save(os.path.join(files,"testset_factors_{}_{}.npy".format(i,seed)),xport_factors_np)
     i+=1
